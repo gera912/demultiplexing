@@ -1,0 +1,457 @@
+2019_08_07
+
+Demultiplexing and Index Swapping.
+
+
+Purpose: Our goal is to look through a lane of sequencing generated from the 2017 BGMP cohort’s library preps and determine the level of index swapping and undetermined index-pairs, before and after quality filtering of index reads. In order to do this, we must first demultiplex the data. Develop a strategy to de-multiplex samples to create 48 FASTQ files that contain acceptable index pairs (read1 and read2 for 24 different index pairs), two FASTQ files with index-hopped reads-pairs, and two FASTQ files undetermined (non-matching or low quality) index-pairs.
+
+
+Tools: Python 3.7.3
+       talapas-ln1
+
+
+Files: 1294_S1_L008_R1_001.fastq.gz
+			 1294_S1_L008_R2_001.fastq.gz
+			 1294_S1_L008_R3_001.fastq.gz
+			 1294_S1_L008_R4_001.fastq.gz
+			 in /projects/bgmp/shared/2017_sequencing/
+
+Setting up: Login talapas: ssh gperez8@talapas-ln1.uoregon.edu:/projects/bgmp/shared/Bi621
+
+
+
+Created a script in bash to count the number of lines in file on the queuing system on HPC:
+							#!/bin/bash
+
+							#SBATCH --account=bgmp
+							#SBATCH --partition=bgmp
+							#SBATCH --job-name=demu
+							#SBATCH --output=slurm-%j-%x.out
+
+							#SBATCH --time=0-01:00:00
+							#SBATCH --nodes=1
+							#SBATCH --ntasks-per-node=1
+							#SBATCH --cpus-per-task=7
+
+wc.sh					file="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R1_001.fastq.gz"
+							/usr/bin/time -v zcat $file | wc -l
+
+							-submitting a job script
+							(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch wc.sh
+
+							-displaying the output
+							(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat slurm-9660208-demu.out
+								Command being timed: "zcat /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R1_001.fastq.gz"
+								User time (seconds): 484.11
+								System time (seconds): 21.59
+								Percent of CPU this job got: 99%
+								Elapsed (wall clock) time (h:mm:ss or m:ss): 8:27.90
+								Average shared text size (kbytes): 0
+								Average unshared data size (kbytes): 0
+								Average stack size (kbytes): 0
+								Average total size (kbytes): 0
+								Maximum resident set size (kbytes): 1520
+								Average resident set size (kbytes): 0
+								Major (requiring I/O) page faults: 0
+								Minor (reclaiming a frame) page faults: 1084
+								Voluntary context switches: 119
+								Involuntary context switches: 483
+								Swaps: 0
+								File system inputs: 0
+								File system outputs: 0
+								Socket messages sent: 0
+								Socket messages received: 0
+								Signals delivered: 0
+								Page size (bytes): 4096
+								Exit status: 0
+							1452986940
+
+part 1-a
+
+Created a python script, c_count.py, calculates the average quality score along each of the basepair of data we have.
+ Then output is a histogram of average base pair means.
+ 								/var/folders/x3/cql658p15ts__8mqw6cwrfn00000gn/T/53437c04/talapas-ln1.uoregon.edu/projects/bgmp/gperez8/projects/bgmp/gperez8/Bio622/c_count.py
+
+
+c_count.py
+
+							#!/usr/bin/env python
+							# Imports module
+							import matplotlib.pyplot as plt
+							import argparse
+							import gzip
+
+							#file="test_R1.txt.gz"
+							#file="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R2_001.fastq.gz"
+
+
+
+							# Creates an arguement passer
+							parser = argparse.ArgumentParser(description="A program for base distribution")
+
+
+							# Adds arguemets by calling the arguement passer
+							parser.add_argument("-f", "--filename", help="specify the filename", required=True)
+							#args = parser.parse_args()
+
+							#Adds arguemets by calling the arguement passer
+							parser.add_argument("-o", "--outputname", help="specify the filename", required=True)
+
+							# Parses arguemets through using the parse args method.
+							args = parser.parse_args()
+
+							# creates variables for args parse
+							file=args.filename
+							output=args.outputname
+
+
+							# Creates a list
+							mean_scores = []
+
+							# Initiates a variable.
+							LN = 0
+
+							# opens and unzips file to read and stores the file as a variable.
+							with gzip.open(file,"rt") as fh:
+
+							    # A while loop.
+							    while True:
+
+							        # Reads the line and strips the new line character.
+							        # Stores the result to a variable. Moves to next line.
+							        fh.readline().strip()
+
+							        # updates the variable by an addition of one after each line has been read.
+							        LN = 1 + LN
+
+							        # Reads the line and strips the new line character.
+							        # Stores the result to a variable. Moves to next line.
+							        L2=fh.readline().strip()
+
+							        # Stores the lenghth of line 2 into a variable.
+							        total=len(L2)
+
+							        # Break loop.
+							        break
+
+							# Creates a method that takes an instance variable.
+							def convert_phred(letter):
+							    """Converts a single character into a phred score"""
+
+							    # Creates a variable that stores a difference
+							    # of -33 of the unicode point from the instance variable.
+							    x = ord(letter) - 33
+
+							    # returns a variable with the result.
+							    return x
+
+							# Creates an empty list
+							mean_scores = []
+
+							# A for loop to insert 101 elements.
+							for i in range(total):
+
+							    # Adds a float to the list.
+							    mean_scores.append(0.0)
+
+
+							    # Initiates a variable.
+							    LN = 0
+
+							# opens and unzips file to read and stores the file as a variable.
+							with gzip.open(file,"rt") as fh:
+
+							     # A for loop that goes through each line in the text file.
+							    for line in fh:
+
+							        # updates the variable by an addition of one after each loop.
+							        LN = LN + 1
+
+							        # If statemnt to get the fourth line from each record in text file.
+							        if LN%4 == 0:
+
+							            # A for loop that goes through each character in the line.
+							            for i in range(total):
+
+							                # Stores a character from line to a variable
+							                char = line[i]
+
+							                # calls the method with an instance ands stores the
+							                # result into a variable.
+							                value = convert_phred(char)
+
+							                #  stores and sums up values into a list
+							                mean_scores[i] = mean_scores[i] + value
+
+							# Stores the value of number of records to a varaible.
+							Num_rec = LN/4
+
+
+							# A for loop that goes through each index in the length of the list.
+							for i in range(len(mean_scores)):
+
+							    # Divides each index in the list by the number of records and stores
+							    # the result back to list.
+							    mean_scores[i] = (mean_scores[i])/(Num_rec)
+
+							# Prints the length of number of bases.
+							# print(len(mean_scores))
+
+							# Plots a bar chart
+							plt.bar(range(len(mean_scores)), mean_scores)
+
+							# Labels X axis
+							plt.xlabel('Base Pair')
+
+							# Labels Y axis
+							plt.ylabel('Mean Quality Score')
+
+							# outputs a png file
+							plt.savefig(output)
+
+
+Created a scripts in bash using python to run c_count.py on the queuing system on HPC:
+
+
+
+								#!/bin/bash
+								#SBATCH --account=bgmp
+								#SBATCH --partition=bgmp
+								#SBATCH --job-name=demu_R1
+								#SBATCH --output=slurm-%j-%x.out
+
+								#SBATCH --time=0-12:00:00
+								#SBATCH --nodes=1
+								#SBATCH --ntasks-per-node=1
+								#SBATCH --cpus-per-task=1
+
+								conda deactivate
+								conda deactivate
+								conda deactivate
+								conda deactivate
+								conda activate bgmp_py3
+
+run_python_R1.sh
+								file1="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R1_001.fastq.gz"
+								/usr/bin/time -v python ./c_count.py -f $file1 -o 1294_S1_L008_R1_001_hist
+
+run_python_R2.sh
+								file2="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R2_001.fastq.gz"
+								/usr/bin/time -v python ./c_count.py -f $file2 -o 1294_S1_L008_R2_001_hist
+
+run_python_R3.sh
+								file3="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R3_001.fastq.gz"
+								/usr/bin/time -v python ./c_count.py -f $file3 -o 1294_S1_L008_R3_001_hist
+
+run_python_R4.sh
+								file4="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R4_001.fastq.gz"
+								/usr/bin/time -v python ./c_count.py -f $file4 -o 1294_S1_L008_R4_001_hist
+
+
+
+								-submitting a job script
+								(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch run_python_R1.sh
+								(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch run_python_R2.sh
+								(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch run_python_R3.sh
+								(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch run_python_R4.sh
+
+
+								-displaying the output
+								(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat  slurm-9698819-demu_R1.out
+								101
+									Command being timed: "python ./c_count.py -f /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R1_001.fastq.gz -o 1294_S1_L008_R1_001_hist"
+									User time (seconds): 11778.64
+									System time (seconds): 4.06
+									Percent of CPU this job got: 99%
+									Elapsed (wall clock) time (h:mm:ss or m:ss): 3:17:15
+									Average shared text size (kbytes): 0
+									Average unshared data size (kbytes): 0
+									Average stack size (kbytes): 0
+									Average total size (kbytes): 0
+									Maximum resident set size (kbytes): 50584
+									Average resident set size (kbytes): 0
+									Major (requiring I/O) page faults: 0
+									Minor (reclaiming a frame) page faults: 138262
+									Voluntary context switches: 1505
+									Involuntary context switches: 28185
+									Swaps: 0
+									File system inputs: 0
+									File system outputs: 0
+									Socket messages sent: 0
+									Socket messages received: 0
+									Signals delivered: 0
+									Page size (bytes): 4096
+									Exit status: 0
+
+									(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat slurm-9698825-demu_R2.out
+									8
+										Command being timed: "python ./c_count.py -f /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R2_001.fastq.gz -o 1294_S1_L008_R2_001_hist"
+										User time (seconds): 1547.69
+										System time (seconds): 0.62
+										Percent of CPU this job got: 99%
+										Elapsed (wall clock) time (h:mm:ss or m:ss): 25:52.03
+										Average shared text size (kbytes): 0
+										Average unshared data size (kbytes): 0
+										Average stack size (kbytes): 0
+										Average total size (kbytes): 0
+										Maximum resident set size (kbytes): 49548
+										Average resident set size (kbytes): 0
+										Major (requiring I/O) page faults: 0
+										Minor (reclaiming a frame) page faults: 44857
+										Voluntary context switches: 864
+										Involuntary context switches: 3648
+										Swaps: 0
+										File system inputs: 0
+										File system outputs: 0
+										Socket messages sent: 0
+										Socket messages received: 0
+										Signals delivered: 0
+										Page size (bytes): 4096
+										Exit status: 0
+
+
+										(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat slurm-9698850-demu_R3.out
+										8
+											Command being timed: "python ./c_count.py -f /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R3_001.fastq.gz -o 1294_S1_L008_R3_001_hist"
+											User time (seconds): 1223.77
+											System time (seconds): 0.52
+											Percent of CPU this job got: 99%
+											Elapsed (wall clock) time (h:mm:ss or m:ss): 20:27.30
+											Average shared text size (kbytes): 0
+											Average unshared data size (kbytes): 0
+											Average stack size (kbytes): 0
+											Average total size (kbytes): 0
+											Maximum resident set size (kbytes): 49552
+											Average resident set size (kbytes): 0
+											Major (requiring I/O) page faults: 0
+											Minor (reclaiming a frame) page faults: 40584
+											Voluntary context switches: 849
+											Involuntary context switches: 2895
+											Swaps: 0
+											File system inputs: 0
+											File system outputs: 0
+											Socket messages sent: 0
+											Socket messages received: 0
+											Signals delivered: 0
+											Page size (bytes): 4096
+											Exit status: 0
+
+											(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat slurm-9698822-demu_R4.out
+											101
+												Command being timed: "python ./c_count.py -f /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R4_001.fastq.gz -o 1294_S1_L008_R4_001_hist"
+												User time (seconds): 11120.96
+												System time (seconds): 4.64
+												Percent of CPU this job got: 99%
+												Elapsed (wall clock) time (h:mm:ss or m:ss): 3:06:16
+												Average shared text size (kbytes): 0
+												Average unshared data size (kbytes): 0
+												Average stack size (kbytes): 0
+												Average total size (kbytes): 0
+												Maximum resident set size (kbytes): 50588
+												Average resident set size (kbytes): 0
+												Major (requiring I/O) page faults: 0
+												Minor (reclaiming a frame) page faults: 134055
+												Voluntary context switches: 1452
+												Involuntary context switches: 26430
+												Swaps: 0
+												File system inputs: 0
+												File system outputs: 0
+												Socket messages sent: 0
+												Socket messages received: 0
+												Signals delivered: 0
+												Page size (bytes): 4096
+												Exit status: 0
+
+
+part 1-c
+ Created a script in bash to count the number of indexes have undetermined (N) base calls in file
+ using the queuing system on HPC:
+
+
+ 												#!/bin/bash
+
+												#SBATCH --account=bgmp
+												#SBATCH --partition=bgmp
+												#SBATCH --job-name=demu_R2_N
+												#SBATCH --output=slurm-%j-%x.out
+
+												#SBATCH --time=0-12:00:00
+												#SBATCH --nodes=1
+												#SBATCH --ntasks-per-node=1
+												#SBATCH --cpus-per-task=1
+
+												conda deactivate
+												conda deactivate
+												conda deactivate
+												conda deactivate
+												conda activate bgmp_py3
+
+
+
+Index_N_calls_R2.sh     file2="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R2_001.fastq.gz"
+												/usr/bin/time -v zcat $file2 | sed -n '2~4p' | grep -c "N"
+
+
+Index_N_calls_R3.sh			file3="/projects/bgmp/shared/2017_sequencing/1294_S1_L008_R3_001.fastq.gz"
+												/usr/bin/time -v zcat $file3 | sed -n '2~4p' | grep -c "N"
+
+
+												-submitting a job script
+												(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch Index_N_calls_R2.sh
+												(bgmp_py3) [gperez8@talapas-ln1 Bio622] sbatch Index_N_calls_R3.sh
+
+
+												-displaying the output
+												(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat slurm-9698993-demu_R2_N.out
+													Command being timed: "zcat /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R2_001.fastq.gz"
+													User time (seconds): 117.55
+													System time (seconds): 3.31
+													Percent of CPU this job got: 49%
+													Elapsed (wall clock) time (h:mm:ss or m:ss): 4:06.03
+													Average shared text size (kbytes): 0
+													Average unshared data size (kbytes): 0
+													Average stack size (kbytes): 0
+													Average total size (kbytes): 0
+													Maximum resident set size (kbytes): 1520
+													Average resident set size (kbytes): 0
+													Major (requiring I/O) page faults: 0
+													Minor (reclaiming a frame) page faults: 896
+													Voluntary context switches: 375753
+													Involuntary context switches: 24
+													Swaps: 0
+													File system inputs: 0
+													File system outputs: 0
+													Socket messages sent: 0
+													Socket messages received: 0
+													Signals delivered: 0
+													Page size (bytes): 4096
+													Exit status: 0
+												3976613
+
+
+
+												(bgmp_py3) [gperez8@talapas-ln1 Bio622]$ cat slurm-9698995-demu_R3_N.out
+													Command being timed: "zcat /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R3_001.fastq.gz"
+													User time (seconds): 121.95
+													System time (seconds): 3.44
+													Percent of CPU this job got: 51%
+													Elapsed (wall clock) time (h:mm:ss or m:ss): 4:05.58
+													Average shared text size (kbytes): 0
+													Average unshared data size (kbytes): 0
+													Average stack size (kbytes): 0
+													Average total size (kbytes): 0
+													Maximum resident set size (kbytes): 1520
+													Average resident set size (kbytes): 0
+													Major (requiring I/O) page faults: 0
+													Minor (reclaiming a frame) page faults: 896
+													Voluntary context switches: 375681
+													Involuntary context switches: 38
+													Swaps: 0
+													File system inputs: 0
+													File system outputs: 0
+													Socket messages sent: 0
+													Socket messages received: 0
+													Signals delivered: 0
+													Page size (bytes): 4096
+													Exit status: 0
+												3328051

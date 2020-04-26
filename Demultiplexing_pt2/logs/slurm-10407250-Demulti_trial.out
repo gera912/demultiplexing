@@ -1,0 +1,54 @@
+GTAGCGTA-GTAGCGTA 1.8 %
+CGATCGAT-CGATCGAT 1.3 %
+GATCAAGG-GATCAAGG 1.4 %
+AACAGCGA-AACAGCGA 2.0 %
+TAGCCATG-TAGCCATG 2.3 %
+CGGTAATC-CGGTAATC 0.9 %
+CTCTGGAT-CTCTGGAT 7.7 %
+TACCGGAT-TACCGGAT 16.0 %
+CTAGCTCA-CTAGCTCA 4.1 %
+CACTTCAC-CACTTCAC 0.9 %
+GCTACTCT-GCTACTCT 1.5 %
+ACGATCAG-ACGATCAG 1.9 %
+TATGGCAC-TATGGCAC 2.5 %
+TGTTCCGT-TGTTCCGT 3.6 %
+GTCCTAAG-GTCCTAAG 2.0 %
+TCGACAAG-TCGACAAG 0.9 %
+TCTTCGAC-TCTTCGAC 9.3 %
+ATCATGCG-ATCATGCG 2.3 %
+ATCGTGGT-ATCGTGGT 1.5 %
+TCGAGAGT-TCGAGAGT 2.5 %
+TCGGATTC-TCGGATTC 1.0 %
+GATCTTGC-GATCTTGC 0.8 %
+AGAGTCCA-AGAGTCCA 2.5 %
+AGGATAGC-AGGATAGC 1.9 %
+263427112
+Reads: 363246735
+undetermine: 2.9 %
+index_hopped: 0.1 %
+index_paired: 72.5 %
+low_quality_barcode: 21.6 %
+low_quality_reads: 2.9 %
+	Command being timed: "python demulty_v5.py -f1 /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R1_001.fastq.gz -f2 /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R2_001.fastq.gz -f3 /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R3_001.fastq.gz -f4 /projects/bgmp/shared/2017_sequencing/1294_S1_L008_R4_001.fastq.gz"
+	User time (seconds): 23995.37
+	System time (seconds): 6240.21
+	Percent of CPU this job got: 64%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 12:57:27
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 161936
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 328180
+	Voluntary context switches: 4680130
+	Involuntary context switches: 874954
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
